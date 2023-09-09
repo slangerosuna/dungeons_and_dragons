@@ -8,4 +8,6 @@ edition = "2021"
 [dependencies]
 bevy = "0.10.0"
 bevy-steamworks = "0.7.0"
+rs_openai = "0.4.1"
 steamworks = "0.10.0"
+tokio = "1.32.0"
