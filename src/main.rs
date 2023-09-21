@@ -7,6 +7,7 @@ use bevy::prelude::*;
 use bevy_steamworks::*;
 use networking::*;
 use ai::*;
+use scripting::*;
 
 fn main() {
     App::new()
