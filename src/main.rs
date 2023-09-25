@@ -5,9 +5,11 @@ mod terrain_gen;
 
 use bevy::prelude::*;
 use bevy_steamworks::*;
+
 use networking::*;
 use ai::*;
-use scripting::*;
+use python_scripting::*;
+use building_gen::*;
 
 fn main() {
     App::new()
