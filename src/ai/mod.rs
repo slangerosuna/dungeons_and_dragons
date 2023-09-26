@@ -31,16 +31,33 @@ impl Plugin for AIPlugin {
 
         let resource = AIResource {
             client: client,
-        };
-
-
+        }; //TODO add to resources
     }
 }
 
 fn setup(
     mut commands: Commands,
 ) {
+    //TODO all
 }
+
+//TODO add script generation
+
+//TODO add npc generation
+//TODO add npc communication
+
+//TODO add building reference generation
+
+//TODO add spell icon generation
+
+//TODO add quest generation
+
+//TODO add map generation
+
+//TODO add campaign generation
+
+//TODO add TODOS
+
 
 //example of how to make an API call
 /*

@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 
+mod dnd_structs;
 mod networking;
 mod ai;
 mod python_scripting;
 mod building_gen;
 mod terrain_gen;
 
+use dnd_structs::*;
 use bevy_steamworks::*;
 use networking::*;
 use ai::*;
