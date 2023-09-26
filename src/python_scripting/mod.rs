@@ -2,7 +2,6 @@ mod scripting_module;
 
 use bevy::prelude::*;
 use rustpython_vm::*;
-use scripting_module::*;
 
 pub struct ScriptingPlugin;
 
@@ -16,14 +15,14 @@ pub fn start_scripting() {
     rustpython::run(|vm| {
         vm.add_native_module(
             "ddnd".to_owned(),
-            Box::new(scripting_module::make_module)
+            Box::new(scripting_module::make_module) //not sure what causes error here, it's literally the same code as is in the docs
         );
     });
 }
 
 //TODO add TODOS
 
-/**
+/*
  * allow the ai and user to write python scripts to control the game in a homebrew like way
  *    - have system oriented around callbacks for things like spell casting, reactions, etc.
  */

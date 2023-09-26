@@ -2,7 +2,7 @@ pub struct building {
     //TODO all
 }
 
-/**
+/*
  * will use a model synthesis algorithm that compares the building to the reference images
  * as a way to decide what sections to include
  *

@@ -1,6 +1,6 @@
 //TODO all
 
-/**
+/*
  *  takes reference maps from ai and generates terrain that follows it with generated rivers,
  *  lakes, and earth with noise and ideally things like erosion in the long-term
  *
