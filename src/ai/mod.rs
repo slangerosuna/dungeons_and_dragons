@@ -14,42 +14,44 @@ pub struct AIPlugin {
     pub model: String,
 }
 
+#[derive(Resource)]
+struct AIResource {
+    client: OpenAI,
+}
+
 impl Plugin for AIPlugin {
     fn build(&self, app: &mut App) {
-        /*app
-            .add_startup_system(setup.system());*/
+        app
+            .add_startup_system(setup);
 
-        let res = move || -> Result<(), Box<dyn std::error::Error>> { 
-            let client = OpenAI::new(&OpenAI {
-                api_key: (*self.api_key).to_string(),
-                org_id: None, //Some("org-l3pIkFP5UpqbFU68T9Hem30H".to_string()),
-            });
+        let client = OpenAI::new(&OpenAI {
+            api_key: (*self.api_key).to_string(),
+            org_id: None, //Some("org-l3pIkFP5UpqbFU68T9Hem30H".to_string()),
+        });
 
-            let req = CreateChatRequestBuilder::default()
-                .model((*self.model).to_string())
-                .messages(vec![ChatCompletionMessageRequestBuilder::default()
-                    .role(Role::User)
-                    .name("User".to_string())
-                    .content("Hello, how are you?")
-                    .build()?])
-                .build()?;
-            
-            let resp = Runtime::new()?.block_on(client.chat().create(&req))?; // error here
-            println!("{:#?}", resp);
+        let resource = AIResource {
+            client: client,
+        };
 
-            Ok(())
-        }();
 
-        if let Err(e) = res {
-            eprintln!("Error: {}", e);
-        }
     }
 }
 
-pub struct AIResource {
-    chat_request_builder: CreateChatRequestBuilder,
+fn setup(
+    mut commands: Commands,
+) {
 }
 
-fn setup(mut commands: Commands) {
+//example of how to make an API call
+/*
+let req = CreateChatRequestBuilder::default()
+    .model((*self.model).to_string())
+    .messages(vec![ChatCompletionMessageRequestBuilder::default()
+        .role(Role::User)
+        .name("User".to_string())
+        .content("Hello, how are you?")
+        .build()?])
+    .build()?;
 
-}
+let resp = Runtime::new()?.block_on(client.chat().create(&req))?; 
+*/

@@ -1,11 +1,12 @@
+use bevy::prelude::*;
+
 mod networking;
 mod ai;
+mod python_scripting;
 mod building_gen;
 mod terrain_gen;
 
-use bevy::prelude::*;
 use bevy_steamworks::*;
-
 use networking::*;
 use ai::*;
 use python_scripting::*;
