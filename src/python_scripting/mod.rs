@@ -1,7 +1,13 @@
 mod scripting_module;
 
 use bevy::prelude::*;
-use rustpython_vm::*;
+use rustpython_vm::{
+    builtins::{
+        PyModule,
+    },
+};
+
+use scripting_module::py_library;
 
 pub struct ScriptingPlugin;
 
@@ -15,7 +21,7 @@ pub fn start_scripting() {
     rustpython::run(|vm| {
         vm.add_native_module(
             "ddnd".to_owned(),
-            Box::new(scripting_module::make_module) //not sure what causes error here, it's literally the same code as is in the docs
+            Box::new(py_library::make_module),
         );
     });
 }
