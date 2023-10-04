@@ -1,7 +1,10 @@
-use rustpython_vm::function::ArgCallable;
+use rustpython_vm::function::{
+    ArgCallable,
+    IntoFuncArgs,
+};
 use bevy::prelude::*;
 
-pub enum ResourceType {
+pub enum Resource {
     Action,
     BonusAction,
     Reaction,
@@ -17,8 +20,8 @@ pub enum ResourceType {
 }
 
 #[derive(Component)]
-pub struct Spell {
-    required_resources: Vec<ResourceType>,
+pub struct Move { //Action, BonusAction, Reaction, etc.
+    required_resources: Vec<Resource>,
 
     name: String,
     icon_path: String, //path to the image displayed to represent the spell
@@ -33,9 +36,9 @@ pub struct Spell {
     used_this_rest: bool,
 }
 
-impl Spell {
+impl Move {
     fn new(
-        required_resources: Vec<ResourceType>,
+        required_resources: Vec<Resource>,
         
         name: String,
         icon_path: String,
@@ -46,8 +49,8 @@ impl Spell {
 
         per_long_rest: bool,
         per_short_rest: bool,
-    ) -> Spell {
-        Spell {
+    ) -> Self {
+        Self {
             required_resources: required_resources,
             
             name: name,
@@ -65,8 +68,18 @@ impl Spell {
     }
 
     //TODO cast function
-    
+    fn cast(&mut self, args: &impl IntoFuncArgs) /*-> TODO*/ {
+        //TODO check if the spell can be cast   
+        
+        //TODO cast the spell on python thread
+    }
+
     //TODO break_concentration function
+    fn break_concentration(&mut self, args: &impl IntoFuncArgs) /*-> TODO*/ {
+        //TODO check if concentration should be broken
+        
+        //TODO break concentration on python thread
+    }
 }
 //TODO add TODOS
 
