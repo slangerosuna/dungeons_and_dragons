@@ -1,4 +1,10 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    ecs::component::{
+        ComponentInfo, 
+        ComponentId,
+    },
+};
 use bevy_steamworks::*;
 
 pub mod serializable_impls;
@@ -44,7 +50,7 @@ pub struct SynchronizedMaster {
     marked_for_deletion: bool,
 }
 impl SynchronizedMaster {
-    pub fn destroy(&mut self) {
+    pub fn destroy(&mut self, networking: &NetworkingResource) {
          self.object_info |= 0b10000000;
 
          let mut bytes: Vec<u8> = Vec::new();
@@ -53,10 +59,9 @@ impl SynchronizedMaster {
          bytes.push(self.static_id.to_le_bytes()[0]);
          bytes.push(self.static_id.to_le_bytes()[1]);
 
-         //TODO fix send(bytes);
+         networking.send_all_reliable(bytes);
     }
 }
-
 
 pub trait Serializable {
     fn from_bytes(&mut self, bytes: &[u8]);
@@ -65,6 +70,7 @@ pub trait Serializable {
     fn get_type_id(&self) -> u16;
 }
 
+pub trait SerializableComponent: Component + Serializable { }
 
 impl Plugin for NetworkingPlugin {
     fn build(&self, app: &mut App) {
@@ -136,17 +142,57 @@ fn sync_slave_entities
 
 fn sync_master_entities
     (networking: Res<NetworkingResource>,
-     commands: Commands,
-     mut query: Query<(Entity, With<SynchronizedMaster>,)>){
+     app: &mut App,
+     query: Query<(Entity, &SynchronizedMaster)>){
         if !networking.connected
             { return; }
-        
-        for mut entity in query.iter_mut() {
-            
-        }
+        let world = app.world;
 
-        //TODO
+        for entity in query.iter() {
+            if (entity.1.object_info & 0b01000000) != 0 {
+                let mut bytes: Vec<u8> = Vec::new();
+                bytes.push(MessageType::EntityUpdate as u8);
+             
+                bytes.push(entity.1.static_id.to_le_bytes()[0]);
+                bytes.push(entity.1.static_id.to_le_bytes()[1]);
+                
+                if let Some(component_ids) = get_component_ids(&world, &entity.0) {
+                    for component_id in component_ids {
+                        |mut bytes: &Vec<u8>| -> Option<()>{
+                        let component_info = component_id_to_component_info(&world, component_id);
+                        let component_name = extract_component_name(component_info?);
+                        
+                        if let Ok(component) = world.get_component::<SerializableComponent>(entity.0, component_id){
+                            bytes.extend_from_slice(&component.get_static_id().to_le_bytes());
+                            bytes.extend_from_slice(&component.to_bytes());
+                        } // TODO fix this
+                        Some(())}(&mut bytes);
+                    }
+                }
+
+                networking.send_all_unreliable(bytes);
+            }
+        }
 }
+
+/// gets an iterator component id from the world corresponding to your entity
+fn get_component_ids<'a>(world: &'a World, entity: &Entity) -> Option<impl Iterator<Item=ComponentId> + 'a> {
+    // components and entities are linked through archetypes
+    for archetype in world.archetypes().iter() {
+        if archetype.entities().iter().any(|e| e.entity() == *entity) { return Some(archetype.components()) } // TODO fix this
+    }
+    None
+}
+
+fn component_id_to_component_info(world: &World, component_id: ComponentId) -> Option<&ComponentInfo> {
+    let components = world.components();
+    components.get_info(component_id)
+}
+
+fn extract_component_name(component_info: &ComponentInfo) -> &str {
+    component_info.name()
+}
+
 
 fn delete_marked_slaves
     (networking: Res<NetworkingResource>,) {
@@ -184,7 +230,7 @@ impl NetworkingResource {
     pub fn create_networked_entity
         (&self,
          commands: &mut Commands,
-         components: &[Box<dyn Serializable>],
+         components: &[Box<impl Serializable>],
          entity: &Entity, 
          sync_periodically: bool,
          static_id: u16) {
