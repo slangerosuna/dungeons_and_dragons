@@ -421,6 +421,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_app_compute"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b11d5054744249acec2ca9be345c1eced4ef12a0abbae71237f9376b0bb52ffa"
+dependencies = [
+ "bevy",
+ "bytemuck",
+ "codespan-reporting",
+ "futures-lite",
+ "parking_lot",
+ "wgpu",
+]
+
+[[package]]
 name = "bevy_asset"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1701,6 +1715,7 @@ dependencies = [
  "bevy",
  "bevy-steamworks",
  "bevy-trait-query",
+ "bevy_app_compute",
  "rs_openai",
  "rustpython",
  "rustpython-vm",
