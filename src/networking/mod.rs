@@ -1,11 +1,8 @@
 use bevy::{
     prelude::*,
-    ecs::component::{
-        ComponentInfo, 
-        ComponentId,
-    },
 };
 use bevy_steamworks::*;
+pub use serializable_impls::*;
 
 pub mod serializable_impls;
 
@@ -30,6 +27,7 @@ pub struct NetworkingResource {
     pub packet_per_frame_limit: u8,
 }
 
+//part of message header
 enum MessageType {
     EntityCreate,
     EntityDelete,
@@ -57,6 +55,7 @@ pub struct SynchronizedMaster {
 }
 impl SynchronizedMaster {
     pub fn destroy(&mut self, networking: &NetworkingResource) {
+         //sets the first bit which signifies whether to delete to 1 marking it for deletion
          self.object_info |= 0b10000000;
 
          let mut bytes: Vec<u8> = Vec::new();
@@ -73,15 +72,22 @@ impl SynchronizedMaster {
 pub trait Serializable {
     fn from_bytes(&mut self, bytes: &[u8]);
     fn to_bytes(&self) -> Vec<u8>;
-
+    
+    //used to identify the type of the component when synchronizing
     fn get_type_id(&self) -> u16;
 }
 
 impl Plugin for NetworkingPlugin {
     fn build(&self, app: &mut App) {
+        //leaks the plugin to prevent it from being dropped until the setup system
         let clone = Box::leak(Box::new(self.clone()));
         app
           .add_plugin(SteamworksPlugin::new(AppId(self.app_id)))
+
+          //Registering components as serializable
+          .register_serializable::<Transform>()
+        
+          //Uses a closure to pass settings to setup system
           .add_startup_system(|a: Commands, b: ResMut<Client>| setup(clone, a, b))
           .add_system(handle_networking)
           .add_system(delete_marked_slaves)
@@ -116,7 +122,8 @@ fn setup(
             plugin.packet_per_frame_limit,
     };
     
-    unsafe { std::mem::drop(plugin); }
+    //drops plugin manually because it was leaked earlier
+    unsafe { std::ptr::drop_in_place(plugin); }
 
     commands.insert_resource(networking_resource);
 }

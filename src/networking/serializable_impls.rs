@@ -3,11 +3,15 @@ use bevy_trait_query::RegisterExt;
 
 use crate::networking::*;
 
-pub fn register_serializable(
-    app: &mut App,
-) {
-    app.
-        register_component_as::<dyn Serializable, Transform>();
+pub trait RegisterSerializable {
+    fn register_serializable<T>(&mut self) -> &mut Self where T: Serializable + Component;
+}
+
+impl RegisterSerializable for App {
+    fn register_serializable<T>(&mut self) -> &mut Self where T: Serializable + Component {
+        self.register_component_as::<dyn Serializable, T>();
+        self
+    }
 }
 
 const VEC3_TYPE_ID: u16 = 0;
