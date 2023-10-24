@@ -166,7 +166,7 @@ fn handle_networking(
 
 fn sync_slave_entities(
     mut networking: ResMut<NetworkingResource>,
-    mut query: Query<(&dyn Serializable, &mut SynchronizedSlave)>,
+    mut query: Query<(&mut dyn Serializable, &mut SynchronizedSlave)>,
 ) {
     if !networking.connected
         { return; }
@@ -177,18 +177,17 @@ fn sync_slave_entities(
         match message[0] {
             EntityUpdate => {
                 let static_id = u16::from_le_bytes([message[1], message[2]]);
-                for entity in query.iter_mut() {
+                for mut entity in query.iter_mut() {
                     if entity.1.static_id == static_id {
                         let mut i = 3;
-                        loop {
-                            if i >= message.len()
-                                { break; }
+                        while i < message.len() {
                             let component_id = u16::from_le_bytes([message[i], message[i + 1]]);
                             i += 2;
 
-                            for component in entity.0 {
+                            for mut component in &mut entity.0 {
                                 if component.get_type_id() == component_id {
-                                    component.from_bytes(&message[i..i+component.get_length()]);
+                                    let len = component.get_length();
+                                    component.from_bytes(&message[i..i+len]);
                                     break;
                                 }
                             }
@@ -199,7 +198,7 @@ fn sync_slave_entities(
             },
             EntityDelete => {
                 let static_id = u16::from_le_bytes([message[1], message[2]]);
-                for entity in query.iter_mut() {
+                for mut entity in query.iter_mut() {
                     if entity.1.static_id == static_id {
                         entity.1.object_info |= 0b10000000;
                         break;
@@ -304,7 +303,7 @@ impl NetworkingResource {
 
         let mut bytes: Vec<u8> = Vec::new();
 
-        bytes.push(MessageType::EntityCreate as u8);
+        bytes.push(EntityCreate);
         bytes.extend_from_slice(&static_id.to_le_bytes());
         bytes.push(object_info);
         bytes.push(components.len().try_into().unwrap());
