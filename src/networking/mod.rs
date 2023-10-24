@@ -28,12 +28,10 @@ pub struct NetworkingResource {
 }
 
 //part of message header
-enum MessageType {
-    EntityCreate,
-    EntityDelete,
-    EntityUpdate,
-    PlayerJoin,
-}
+const EntityCreate: u8 = 0;
+const EntityDelete: u8 = 1;
+const EntityUpdate: u8 = 2;
+const PlayerJoin: u8 = 3;
 
 #[derive(Component)]
 pub struct SynchronizedSlave {
@@ -60,7 +58,7 @@ impl SynchronizedMaster {
 
          let mut bytes: Vec<u8> = Vec::new();
 
-         bytes.push(MessageType::EntityDelete as u8);
+         bytes.push(EntityDelete);
          bytes.push(self.static_id.to_le_bytes()[0]);
          bytes.push(self.static_id.to_le_bytes()[1]);
 
@@ -73,6 +71,7 @@ pub trait Serializable {
     fn from_bytes(&mut self, bytes: &[u8]);
     fn to_bytes(&self) -> Vec<u8>;
     
+    fn get_length(&self) -> usize;
     //used to identify the type of the component when synchronizing
     fn get_type_id(&self) -> u16;
 }
@@ -156,23 +155,67 @@ fn handle_networking(
         let (_, sender) = networking.read_p2p_packet(buffer.as_mut_slice()).unwrap();
 
         //if the sender is not in the active players list, add them
-        if buffer[0] == MessageType::EntityUpdate as u8
-        || buffer[0] == MessageType::EntityDelete as u8 {
+        if buffer[0] == EntityUpdate 
+        || buffer[0] == EntityDelete {
             networking_res.sync_messages.push(buffer);
-        } else if buffer[0] == MessageType::EntityCreate as u8 {
+        } else if buffer[0] == EntityCreate {
             //TODO create
         }
     }
 }
 
 fn sync_slave_entities(
-    networking: Res<NetworkingResource>,
-    mut commands: Commands,
-    mut query: Query<&mut SynchronizedSlave>,
+    mut networking: ResMut<NetworkingResource>,
+    mut query: Query<(&dyn Serializable, &mut SynchronizedSlave)>,
 ) {
     if !networking.connected
         { return; }
+    
+    let sync_messages = networking.sync_messages.clone();
+
+    for message in sync_messages.into_iter() {
+        match message[0] {
+            EntityUpdate => {
+                let static_id = u16::from_le_bytes([message[1], message[2]]);
+                for entity in query.iter_mut() {
+                    if entity.1.static_id == static_id {
+                        let mut i = 3;
+                        loop {
+                            if i >= message.len()
+                                { break; }
+                            let component_id = u16::from_le_bytes([message[i], message[i + 1]]);
+                            i += 2;
+
+                            for component in entity.0 {
+                                if component.get_type_id() == component_id {
+                                    component.from_bytes(&message[i..i+component.get_length()]);
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            },
+            EntityDelete => {
+                let static_id = u16::from_le_bytes([message[1], message[2]]);
+                for entity in query.iter_mut() {
+                    if entity.1.static_id == static_id {
+                        entity.1.object_info |= 0b10000000;
+                        break;
+                    }
+                }
+            },
+            _ => { continue; },
+        }
+    }
+    
+    for entity in query.iter_mut() {
+
+    }
     //TODO
+    
+    networking.sync_messages.clear();
 }
 
 fn sync_master_entities(
@@ -187,7 +230,7 @@ fn sync_master_entities(
             let mut bytes: Vec<u8> = Vec::new();
 
             //Adds header data (message type and static id)
-            bytes.push(MessageType::EntityUpdate as u8);
+            bytes.push(EntityUpdate);
             bytes.extend_from_slice(&entity.1.static_id.to_le_bytes());
             
             for component in entity.0 {

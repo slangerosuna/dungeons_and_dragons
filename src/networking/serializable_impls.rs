@@ -25,6 +25,10 @@ impl Serializable for Vec3 {
         bytes
     }
 
+    fn get_length(&self) -> usize {
+        std::mem::size_of::<f32>() * 3
+    }
+
     fn from_bytes(&mut self, bytes: &[u8]) {
         let mut offset = 0;
         self.x = f32::from_le_bytes([bytes[offset], bytes[offset + 1],
@@ -52,6 +56,10 @@ impl Serializable for Quat {
         bytes.extend_from_slice(&self.z.to_le_bytes());
         bytes.extend_from_slice(&self.w.to_le_bytes());
         bytes
+    }
+
+    fn get_length(&self) -> usize {
+        std::mem::size_of::<f32>() * 4
     }
 
     fn from_bytes(&mut self, bytes: &[u8]) {
@@ -83,6 +91,10 @@ impl Serializable for Transform {
         bytes.extend_from_slice(&self.rotation.to_bytes());
         bytes.extend_from_slice(&self.scale.to_bytes());
         bytes
+    }
+
+    fn get_length(&self) -> usize {
+        std::mem::size_of::<f32>() * 10
     }
 
     fn from_bytes(&mut self, bytes: &[u8]) {
