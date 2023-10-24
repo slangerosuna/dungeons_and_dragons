@@ -1,6 +1,14 @@
 use bevy::prelude::*;
+use bevy_trait_query::RegisterExt;
 
 use crate::networking::*;
+
+pub fn register_serializable(
+    app: &mut App,
+) {
+    app.
+        register_component_as::<dyn Serializable, Transform>();
+}
 
 const VEC3_TYPE_ID: u16 = 0;
 
