@@ -25,6 +25,55 @@ pub struct NetworkingResource {
     pub active_players: Vec<SteamId>,
     pub sync_messages: Vec<Vec<u8>>,
     pub packet_per_frame_limit: u8,
+    
+    pub event_queue_out: Vec<NetworkingEvent>,
+    pub event_queue_in: Vec<Vec<NetworkingEvent>>, // The index of the outer vector is the event type
+}
+
+impl NetworkingResource {
+    fn queue_event_out(&mut self, event: NetworkingEvent) {
+        self.event_queue_out.push(event);
+    }
+    fn get_event_in(&mut self, event_type: u8) -> Vec<NetworkingEvent> {
+        let val = self.event_queue_in[event_type as usize].clone();
+        self.event_queue_in[event_type as usize].clear();
+        val
+    }
+}
+
+#[derive(Clone)]
+pub struct NetworkingEvent {
+    event_type: u8,
+    length: u16,
+    data: Vec<u8>,
+}
+
+impl NetworkingEvent {
+    fn new(event_type: u8, length: u16, data: Vec<u8>) -> NetworkingEvent {
+        NetworkingEvent {
+            event_type,
+            length,
+            data,
+        }
+    }
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes: Vec<u8> = Vec::new();
+        bytes.push(self.event_type);
+        bytes.push(self.length.to_le_bytes()[0]);
+        bytes.push(self.length.to_le_bytes()[1]);
+        bytes.append(&mut self.data.clone());
+        bytes
+    }
+    fn from_bytes(bytes: &[u8]) -> NetworkingEvent {
+        let event_type = bytes[0];
+        let length = u16::from_le_bytes([bytes[1], bytes[2]]);
+        let data = bytes[3..].to_vec();
+        NetworkingEvent {
+            event_type,
+            length,
+            data,
+        }
+    }
 }
 
 //part of message header
@@ -32,6 +81,7 @@ const EntityCreate: u8 = 0;
 const EntityDelete: u8 = 1;
 const EntityUpdate: u8 = 2;
 const PlayerJoin: u8 = 3;
+const PlayerLeave: u8 = 4;
 
 #[derive(Component)]
 pub struct SynchronizedSlave {
@@ -92,7 +142,8 @@ impl Plugin for NetworkingPlugin {
           .add_system(delete_marked_slaves)
           .add_system(delete_marked_masters)
           .add_system(sync_slave_entities)
-          .add_system(sync_master_entities); 
+          .add_system(sync_master_entities)
+          ;//.add_system(handle_events); 
     }
 }
 
@@ -107,6 +158,11 @@ fn setup(
     active_players.push(player_id);
 
     let sync_messages: Vec<Vec<u8>> = Vec::new();
+    let mut event_queue_in: Vec<Vec<NetworkingEvent>> = Vec::new();
+    
+    for i in 0..u8::max_value() {
+        event_queue_in.push(Vec::new());
+    }
 
     let networking_resource = NetworkingResource {
         max_players: plugin.max_players,
@@ -119,6 +175,9 @@ fn setup(
         sync_messages,
         packet_per_frame_limit:
             plugin.packet_per_frame_limit,
+        
+        event_queue_out: Vec::new(),
+        event_queue_in: event_queue_in,
     };
     
     //drops plugin manually because it was leaked earlier
@@ -164,13 +223,15 @@ fn handle_networking(
     }
 }
 
+const MAX_COMPONENTS_PER_ENTITY: usize = 10;
+
 fn sync_slave_entities(
     mut networking: ResMut<NetworkingResource>,
     mut query: Query<(&mut dyn Serializable, &mut SynchronizedSlave)>,
 ) {
     if !networking.connected
         { return; }
-    
+    //clones the sync messages to prevent borrowing issues
     let sync_messages = networking.sync_messages.clone();
 
     for message in sync_messages.into_iter() {
@@ -179,18 +240,27 @@ fn sync_slave_entities(
                 let static_id = u16::from_le_bytes([message[1], message[2]]);
                 for mut entity in query.iter_mut() {
                     if entity.1.static_id == static_id {
+                        //skips the first 3 bytes which are the message type and static id
                         let mut i = 3;
+                        
+                        //used to keep track of the number of components updated
+                        let mut n = 0;
                         while i < message.len() {
+                            if n > MAX_COMPONENTS_PER_ENTITY
+                                { break; }
                             let component_id = u16::from_le_bytes([message[i], message[i + 1]]);
                             i += 2;
-
+                            
+                            //finds the component with the matching id and updates it
                             for mut component in &mut entity.0 {
                                 if component.get_type_id() == component_id {
                                     let len = component.get_length();
                                     component.from_bytes(&message[i..i+len]);
+                                    i += len;
                                     break;
                                 }
                             }
+                            n += 1;
                         }
                         break;
                     }
@@ -205,14 +275,9 @@ fn sync_slave_entities(
                     }
                 }
             },
-            _ => { continue; },
+            _ => { panic!("Invalid sync message"); }, //Should be impossible to reach
         }
     }
-    
-    for entity in query.iter_mut() {
-
-    }
-    //TODO
     
     networking.sync_messages.clear();
 }
@@ -240,7 +305,8 @@ fn sync_master_entities(
                 bytes.extend_from_slice(&component.to_bytes());
             }
 
-            //sends all unreliable because it's ok if some packets are dropped
+            //sends all unreliable because it's ok if some packets are dropped 
+            //because they are sent every frame anyways
             networking.send_all_unreliable(bytes);
         }
     }
@@ -248,18 +314,32 @@ fn sync_master_entities(
 
 fn delete_marked_slaves(
     networking: Res<NetworkingResource>,
+    mut commands: Commands,
+    query: Query<(Entity, &SynchronizedSlave)>
 ) {
     if !networking.connected
         { return; }
-    //TODO
+    
+    for entity in query.iter() {
+        if (entity.1.object_info & 0b10000000) != 0 {
+            commands.entity(entity.0).despawn_recursive();
+        }
+    }
 }
 
 fn delete_marked_masters(
     networking: Res<NetworkingResource>,
+    mut commands: Commands,
+    query: Query<(Entity, &SynchronizedMaster)>
 ) {
     if !networking.connected
         { return; }
-    //TODO
+
+    for entity in query.iter() {
+        if (entity.1.object_info & 0b10000000) != 0 {
+            commands.entity(entity.0).despawn_recursive();
+        }
+    }
 }
 
 impl NetworkingResource {

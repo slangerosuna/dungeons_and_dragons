@@ -1,13 +1,7 @@
 use bevy::prelude::*;
 use rs_openai:: {
-    chat::{
-        ChatCompletionMessageRequestBuilder,
-        CreateChatRequestBuilder,
-        Role,
-    },
     OpenAI,
 };
-use tokio::runtime::Runtime;
 
 pub struct AIPlugin {
     pub api_key: String,
@@ -70,5 +64,5 @@ let req = CreateChatRequestBuilder::default()
         .build()?])
     .build()?;
 
-let resp = Runtime::new()?.block_on(client.chat().create(&req))?; 
+let resp = tokio::runtime::Runtime::new()?.block_on(client.chat().create(&req))?; 
 */
