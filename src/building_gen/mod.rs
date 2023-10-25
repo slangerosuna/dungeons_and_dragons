@@ -63,7 +63,7 @@ pub struct building {
 }
 
 /*
- * will use a model synthesis algorithm that compares the building to the reference images
+ * will use a model synthesis algorithm that compares the building to the reference images 
  * as a way to decide what sections to include
  *
  * creates unique sections to include for certain groups of buildings
@@ -71,4 +71,24 @@ pub struct building {
  * uses references to decide shape before filling in the details with sections
  *
  * reference: https://paulmerrell.org/model-synthesis/
+ *
+ * After the building is generated through the model synthesis algorithm, it will be modified
+ * with something based off of gaussian splatting, but starting with the model synthesis output
+ * instead of random to add details
+ * 
+ * references: 
+ *     1. Dreamgaussian
+ *         Code: https://github.com/dreamgaussian/dreamgaussian
+ *         Article pdf: https://arxiv.org/pdf/2309.16653.pdf
+ *     2. GraphDeco 3d Gaussian Splatting
+ *         Code: https://github.com/graphdeco-inria/gaussian-splatting
+ *         Article pdf: https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/3d_gaussian_splatting_high.pdf
+ *     
+ * Passes:
+ *     1. Line Detection
+ *     2. Use lines to create rough shape with model synthesis (voxel output)
+ *     3. Gaussian splatting to add details
+ *     4. Convert voxel output to mesh with marching cubes
+ *     5. ???
+ *     6. Profit
  */
