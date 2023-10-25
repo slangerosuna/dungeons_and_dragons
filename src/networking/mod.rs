@@ -143,7 +143,7 @@ impl Plugin for NetworkingPlugin {
           .add_system(delete_marked_masters)
           .add_system(sync_slave_entities)
           .add_system(sync_master_entities)
-          ;//.add_system(handle_events); 
+          .add_system(handle_events); 
     }
 }
 
@@ -340,6 +340,12 @@ fn delete_marked_masters(
             commands.entity(entity.0).despawn_recursive();
         }
     }
+}
+
+fn handle_events(
+    mut networking: ResMut<NetworkingResource>,
+) {
+
 }
 
 impl NetworkingResource {
