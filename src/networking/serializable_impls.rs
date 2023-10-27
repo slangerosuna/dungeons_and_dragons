@@ -3,12 +3,15 @@ use bevy_trait_query::RegisterExt;
 
 use crate::networking::*;
 
+//So other modules don't need to use bevy_trait_query
 pub trait RegisterSerializable {
-    fn register_serializable<T>(&mut self) -> &mut Self where T: Serializable + Component;
+    fn register_serializable<T>(&mut self) 
+        -> &mut Self where T: Serializable + Component;
 }
 
 impl RegisterSerializable for App {
-    fn register_serializable<T>(&mut self) -> &mut Self where T: Serializable + Component {
+    fn register_serializable<T>(&mut self) 
+        -> &mut Self where T: Serializable + Component {
         self.register_component_as::<dyn Serializable, T>();
         self
     }

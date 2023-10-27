@@ -2,6 +2,7 @@ use bevy::{
     prelude::*,
 };
 use bevy_steamworks::*;
+use std::sync::Mutex;
 pub use serializable_impls::*;
 
 pub mod serializable_impls;
@@ -26,33 +27,34 @@ pub struct NetworkingResource {
     pub sync_messages: Vec<Vec<u8>>,
     pub packet_per_frame_limit: u8,
     
-    pub event_queue_out: Vec<NetworkingEvent>,
-    pub event_queue_in: Vec<Vec<NetworkingEvent>>, // The index of the outer vector is the event type
+    pub event_queue_out: Mutex<Vec<NetworkingEvent>>,
+    pub event_queue_in: Vec<Mutex<Vec<NetworkingEvent>>>, // The index of the outer vector is the event type
 }
 
 impl NetworkingResource {
-    fn queue_event_out(&mut self, event: NetworkingEvent) {
-        self.event_queue_out.push(event);
+    fn queue_event_out(&self, event: NetworkingEvent) {
+        //If there is a panic, it is because the mutex is poisoned
+        let mut event_out = self.event_queue_out.lock().unwrap();
+        event_out.push(event);
     }
-    fn get_event_in(&mut self, event_type: u8) -> Vec<NetworkingEvent> {
-        let val = self.event_queue_in[event_type as usize].clone();
-        self.event_queue_in[event_type as usize].clear();
-        val
+    fn get_event_in(&self, event_type: u8) -> Vec<NetworkingEvent> {
+        let mut queue_in = self.event_queue_in[event_type as usize].lock().unwrap();
+        queue_in.drain(..).collect()
     }
 }
 
 #[derive(Clone)]
 pub struct NetworkingEvent {
-    event_type: u8,
+    pub event_type: u8,
     length: u16,
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl NetworkingEvent {
-    fn new(event_type: u8, length: u16, data: Vec<u8>) -> NetworkingEvent {
+    fn new(event_type: u8, data: Vec<u8>) -> NetworkingEvent {
         NetworkingEvent {
             event_type,
-            length,
+            length: data.len() as u16,
             data,
         }
     }
@@ -61,13 +63,13 @@ impl NetworkingEvent {
         bytes.push(self.event_type);
         bytes.push(self.length.to_le_bytes()[0]);
         bytes.push(self.length.to_le_bytes()[1]);
-        bytes.append(&mut self.data.clone());
+        bytes.append(&mut self.data.clone().into());
         bytes
     }
     fn from_bytes(bytes: &[u8]) -> NetworkingEvent {
         let event_type = bytes[0];
         let length = u16::from_le_bytes([bytes[1], bytes[2]]);
-        let data = bytes[3..].to_vec();
+        let data = bytes[3..(length as usize + 3)].to_vec();
         NetworkingEvent {
             event_type,
             length,
@@ -77,11 +79,12 @@ impl NetworkingEvent {
 }
 
 //part of message header
-const EntityCreate: u8 = 0;
-const EntityDelete: u8 = 1;
-const EntityUpdate: u8 = 2;
-const PlayerJoin: u8 = 3;
-const PlayerLeave: u8 = 4;
+const ENTITY_CREATE: u8 = 0;
+const ENTITY_DELETE: u8 = 1;
+const ENTITY_UPDATE: u8 = 2;
+const PLAYER_JOIN: u8 = 3;
+const PLAYER_LEAVE: u8 = 4;
+const EVENT: u8 = 5;
 
 #[derive(Component)]
 pub struct SynchronizedSlave {
@@ -108,7 +111,7 @@ impl SynchronizedMaster {
 
          let mut bytes: Vec<u8> = Vec::new();
 
-         bytes.push(EntityDelete);
+         bytes.push(ENTITY_DELETE);
          bytes.push(self.static_id.to_le_bytes()[0]);
          bytes.push(self.static_id.to_le_bytes()[1]);
 
@@ -129,11 +132,13 @@ pub trait Serializable {
 impl Plugin for NetworkingPlugin {
     fn build(&self, app: &mut App) {
         //leaks the plugin to prevent it from being dropped until the setup system
+        //TODO make this less sketchy (low priority since it works)
         let clone = Box::leak(Box::new(self.clone()));
         app
           .add_plugin(SteamworksPlugin::new(AppId(self.app_id)))
 
           //Registering components as serializable
+          //TODO add other components when I implement Serializable for them
           .register_serializable::<Transform>()
         
           //Uses a closure to pass settings to setup system
@@ -142,8 +147,7 @@ impl Plugin for NetworkingPlugin {
           .add_system(delete_marked_slaves)
           .add_system(delete_marked_masters)
           .add_system(sync_slave_entities)
-          .add_system(sync_master_entities)
-          .add_system(handle_events); 
+          .add_system(sync_master_entities);
     }
 }
 
@@ -158,11 +162,12 @@ fn setup(
     active_players.push(player_id);
 
     let sync_messages: Vec<Vec<u8>> = Vec::new();
-    let mut event_queue_in: Vec<Vec<NetworkingEvent>> = Vec::new();
-    
-    for i in 0..u8::max_value() {
-        event_queue_in.push(Vec::new());
-    }
+    let mut event_queue_in: Vec<Mutex<Vec<NetworkingEvent>>> = Vec::new();
+
+    //preallocates the event queue
+    event_queue_in.reserve_exact(u8::max_value() as usize);
+
+    for _ in 0..u8::max_value() { event_queue_in.push(Mutex::new(Vec::new())); }
 
     let networking_resource = NetworkingResource {
         max_players: plugin.max_players,
@@ -176,8 +181,8 @@ fn setup(
         packet_per_frame_limit:
             plugin.packet_per_frame_limit,
         
-        event_queue_out: Vec::new(),
-        event_queue_in: event_queue_in,
+        event_queue_out: Mutex::new(Vec::new()),
+        event_queue_in,
     };
     
     //drops plugin manually because it was leaked earlier
@@ -214,11 +219,27 @@ fn handle_networking(
         let (_, sender) = networking.read_p2p_packet(buffer.as_mut_slice()).unwrap();
 
         //if the sender is not in the active players list, add them
-        if buffer[0] == EntityUpdate 
-        || buffer[0] == EntityDelete {
-            networking_res.sync_messages.push(buffer);
-        } else if buffer[0] == EntityCreate {
-            //TODO create
+        match buffer[0] {
+            ENTITY_UPDATE => networking_res.sync_messages.push(buffer),
+            ENTITY_DELETE => networking_res.sync_messages.push(buffer),
+            ENTITY_CREATE => {
+                //TODO create entity
+            },
+            PLAYER_JOIN => {
+                //TODO add player
+            },
+            PLAYER_LEAVE => {
+                //TODO remove player and all their entities that are destroy_on_owner_disconnect
+                //TODO decide who inherits their entities
+            },
+            EVENT => {
+                //doesn't include the first byte which is the msg type
+                let event = NetworkingEvent::from_bytes(&buffer[1..]); 
+                //pushes the event to the event queue
+                let mut queue_in = networking_res.event_queue_in[event.event_type as usize].lock().unwrap();
+                queue_in.push(event); 
+            },
+            _ => (),
         }
     }
 }
@@ -236,7 +257,7 @@ fn sync_slave_entities(
 
     for message in sync_messages.into_iter() {
         match message[0] {
-            EntityUpdate => {
+            ENTITY_UPDATE => {
                 let static_id = u16::from_le_bytes([message[1], message[2]]);
                 for mut entity in query.iter_mut() {
                     if entity.1.static_id == static_id {
@@ -266,7 +287,7 @@ fn sync_slave_entities(
                     }
                 }
             },
-            EntityDelete => {
+            ENTITY_DELETE => {
                 let static_id = u16::from_le_bytes([message[1], message[2]]);
                 for mut entity in query.iter_mut() {
                     if entity.1.static_id == static_id {
@@ -294,7 +315,7 @@ fn sync_master_entities(
             let mut bytes: Vec<u8> = Vec::new();
 
             //Adds header data (message type and static id)
-            bytes.push(EntityUpdate);
+            bytes.push(ENTITY_UPDATE);
             bytes.extend_from_slice(&entity.1.static_id.to_le_bytes());
             
             for component in entity.0 {
@@ -342,12 +363,6 @@ fn delete_marked_masters(
     }
 }
 
-fn handle_events(
-    mut networking: ResMut<NetworkingResource>,
-) {
-
-}
-
 impl NetworkingResource {
     fn send_all_unreliable(
         &self, bytes: Vec<u8>
@@ -389,7 +404,7 @@ impl NetworkingResource {
 
         let mut bytes: Vec<u8> = Vec::new();
 
-        bytes.push(EntityCreate);
+        bytes.push(ENTITY_CREATE);
         bytes.extend_from_slice(&static_id.to_le_bytes());
         bytes.push(object_info);
         bytes.push(components.len().try_into().unwrap());

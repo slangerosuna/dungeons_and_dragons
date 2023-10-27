@@ -76,7 +76,7 @@ pub struct building {
  * with something based off of gaussian splatting, but starting with the model synthesis output
  * instead of random to add details
  * 
- * references: 
+ * References: 
  *     1. Dreamgaussian
  *         Code: https://github.com/dreamgaussian/dreamgaussian
  *         Article pdf: https://arxiv.org/pdf/2309.16653.pdf
