@@ -6,9 +6,9 @@ mod ai;
 mod python_scripting;
 mod building_gen;
 mod terrain_gen;
+mod character_gen;
 
-use dnd_structs::*;
-use bevy_steamworks::*;
+use character_gen::*;
 use networking::*;
 use ai::*;
 use python_scripting::*;
@@ -17,6 +17,7 @@ use building_gen::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugin(CharacterGenerator)
         .add_plugin(BuildingGenerator)
         .add_plugin(NetworkingPlugin{
             max_players: 4, max_synced_objects: 1000, 

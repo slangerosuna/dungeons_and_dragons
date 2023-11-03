@@ -25,7 +25,9 @@ impl Plugin for AIPlugin {
 
         let resource = AIResource {
             client: client,
-        }; //TODO add to resources
+        };
+
+        app.insert_resource(resource);
     }
 }
 
