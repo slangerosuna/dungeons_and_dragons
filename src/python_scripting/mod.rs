@@ -1,11 +1,6 @@
 mod scripting_module;
 
 use bevy::prelude::*;
-use rustpython_vm::{
-    builtins::{
-        PyModule,
-    },
-};
 
 use scripting_module::py_library;
 
@@ -18,12 +13,7 @@ impl Plugin for ScriptingPlugin {
 }
 
 pub fn start_scripting() {
-    rustpython::run(|vm| {
-        vm.add_native_module(
-            "ddnd".to_owned(),
-            Box::new(py_library::make_module),
-        );
-    });
+    //TODO
 }
 
 //TODO add TODOS
