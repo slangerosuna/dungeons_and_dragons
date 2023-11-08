@@ -39,7 +39,6 @@ fn setup(
 
 //TODO add script generation
 
-//TODO add npc generation
 //TODO add npc communication
 
 //TODO add building reference generation

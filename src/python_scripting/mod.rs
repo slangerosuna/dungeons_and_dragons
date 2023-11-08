@@ -1,8 +1,6 @@
-mod scripting_module;
-
 use bevy::prelude::*;
-
-use scripting_module::py_library;
+use std::sync::Mutex;
+use std::thread::*;
 
 pub struct ScriptingPlugin;
 
@@ -12,8 +10,44 @@ impl Plugin for ScriptingPlugin {
     }
 }
 
-pub fn start_scripting() {
-    //TODO
+#[derive(Resource)]
+pub struct ScriptingResource;
+
+impl ScriptingResource {
+    pub fn register_func(
+        &self,
+        //TODO
+    ) -> PyFn {
+        //TODO send function channels to scripting thread
+    }
+}
+
+pub struct PyFn {
+    //TODO use channels in order to have python calls on scripting thread
+}
+
+impl PyFn {
+    fn call (
+        &mut self,
+        //TODO
+    ) {
+        //TODO
+    }
+}
+
+pub fn start_scripting(
+    mut commands: Commands,
+) {
+    //TODO MAKE RESOURCE
+    spawn(
+        move || {
+            //TODO python managing thread
+            panic!("Not Implemented yet"); //Prevents empty infinite loop
+            loop {
+                //TODO find when to break
+            }
+        }
+    );
 }
 
 //TODO add TODOS

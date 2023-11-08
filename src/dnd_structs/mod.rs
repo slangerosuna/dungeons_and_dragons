@@ -1,9 +1,6 @@
-use rustpython_vm::function::{
-    ArgCallable,
-    IntoFuncArgs,
-};
 use bevy::prelude::*;
-
+use crate::python_scripting::*;
+use pyo3::{*, types::*,};
 pub enum Resource {
     Action,
     BonusAction,
@@ -27,8 +24,8 @@ pub struct Move { //Action, BonusAction, Reaction, etc.
     icon_path: String, //path to the image displayed to represent the spell
     description: String,
 
-    cast: Box<ArgCallable>,
-    break_concentration: Box<ArgCallable>,
+    cast: PyFn,
+    break_concentration: PyFn,
 
     per_long_rest: bool,
     per_short_rest: bool,
@@ -44,8 +41,8 @@ impl Move {
         icon_path: String,
         description: String,
         
-        cast: Box<ArgCallable>, 
-        break_concentration: Box<ArgCallable>,
+        cast: PyFn, 
+        break_concentration: PyFn,
 
         per_long_rest: bool,
         per_short_rest: bool,
@@ -68,14 +65,14 @@ impl Move {
     }
 
     //TODO cast function
-    fn cast(&mut self, args: &impl IntoFuncArgs) /*-> TODO*/ {
+    fn cast(&mut self, args: &impl IntoPy<Py<PyTuple>>) /*-> TODO*/ {
         //TODO check if the spell can be cast   
         
         //TODO cast the spell on python thread
     }
 
     //TODO break_concentration function
-    fn break_concentration(&mut self, args: &impl IntoFuncArgs) /*-> TODO*/ {
+    fn break_concentration(&mut self, args: &impl IntoPy<Py<PyTuple>>) /*-> TODO*/ {
         //TODO check if concentration should be broken
         
         //TODO break concentration on python thread

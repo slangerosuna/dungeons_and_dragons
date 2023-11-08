@@ -8,9 +8,22 @@ impl Plugin for CharacterGenerator {
     }
 }
 
+pub enum Mannerism {
+    Wave,
+    Point,
+    Dance,
+    Idle,
+}
+
 #[derive(Component)]
 pub struct CharacterInfo {
-    //TODO
+    pub nameString: String,
+    pub race: String,
+    pub traits: Vec<String>,
+    pub bonds: Vec<String>,
+    pub flaws: Vec<String>,
+    pub ideals: Vec<String>,
+    pub mannerisms: Vec<Mannerism>,
 }
 
 pub struct CharacterBundle (CharacterInfo, SceneBundle);

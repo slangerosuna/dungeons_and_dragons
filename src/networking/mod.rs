@@ -162,10 +162,8 @@ fn setup(
     active_players.push(player_id);
 
     let sync_messages: Vec<Vec<u8>> = Vec::new();
-    let mut event_queue_in: Vec<Mutex<Vec<NetworkingEvent>>> = Vec::new();
-
-    //preallocates the event queue
-    event_queue_in.reserve_exact(u8::max_value() as usize);
+    let mut event_queue_in: Vec<Mutex<Vec<NetworkingEvent>>> = 
+        Vec::with_capacity(u8::max_value() as usize);
 
     for _ in 0..u8::max_value() { event_queue_in.push(Mutex::new(Vec::new())); }
 
@@ -235,9 +233,12 @@ fn handle_networking(
             EVENT => {
                 //doesn't include the first byte which is the msg type
                 let event = NetworkingEvent::from_bytes(&buffer[1..]); 
-                //pushes the event to the event queue
-                let mut queue_in = networking_res.event_queue_in[event.event_type as usize].lock().unwrap();
-                queue_in.push(event); 
+                //pushes the event to the event queue on a new thread to prevent blocking from
+                //slowing down networking
+                std::thread::spawn( move || {
+                    let mut queue_in = networking_res.event_queue_in[event.event_type as usize].lock().unwrap();
+                    queue_in.push(event);
+                } );
             },
             _ => (),
         }
