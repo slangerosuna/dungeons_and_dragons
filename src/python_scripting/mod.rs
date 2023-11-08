@@ -18,6 +18,7 @@ impl ScriptingResource {
         &self,
         //TODO
     ) -> PyFn {
+        panic!("Function Not Implemented");
         //TODO send function channels to scripting thread
     }
 }

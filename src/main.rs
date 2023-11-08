@@ -15,6 +15,14 @@ use python_scripting::*;
 use building_gen::*;
 
 fn main() {
+    //Makes it so that if someone calls `panic!("at the disco")` it will open a Panic! at the Disco song
+    //This has no real purpose, but I find it funny and it's my project so you can't stop me
+    std::panic::set_hook(Box::new(|panic_info| {
+        if Some(&"at the disco") == panic_info.payload().downcast_ref::<&str>() {
+           open::that("https://www.youtube.com/watch?v=H5NqIsnyTG8").ok();
+        }
+    }));
+
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(CharacterGenerator)
