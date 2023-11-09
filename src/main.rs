@@ -22,7 +22,7 @@ fn main() {
            open::that("https://www.youtube.com/watch?v=H5NqIsnyTG8").ok();
         }
     }));
-
+    
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(CharacterGenerator)

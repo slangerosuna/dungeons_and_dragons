@@ -27,19 +27,16 @@ pub struct NetworkingResource {
     pub sync_messages: Vec<Vec<u8>>,
     pub packet_per_frame_limit: u8,
     
-    pub event_queue_out: Mutex<Vec<NetworkingEvent>>,
-    pub event_queue_in: Vec<Mutex<Vec<NetworkingEvent>>>, // The index of the outer vector is the event type
+    event_queue_out: Mutex<Vec<NetworkingEvent>>,
+    event_queue_in: Vec<Mutex<Vec<NetworkingEvent>>>, // The index of the outer vector is the event type
 }
 
 impl NetworkingResource {
-    fn queue_event_out(&self, event: NetworkingEvent) {
-        //If there is a panic, it is because the mutex is poisoned
-        let mut event_out = self.event_queue_out.lock().unwrap();
-        event_out.push(event);
+    pub fn queue_event_out(&self, event: NetworkingEvent) {
+        self.event_queue_out.lock().unwrap().push(event);
     }
-    fn get_event_in(&self, event_type: u8) -> Vec<NetworkingEvent> {
-        let mut queue_in = self.event_queue_in[event_type as usize].lock().unwrap();
-        queue_in.drain(..).collect()
+    pub fn get_event_in(&self, event_type: u8) -> Vec<NetworkingEvent> {
+        self.event_queue_in[event_type as usize].lock().unwrap().drain(..).collect()
     }
 }
 
@@ -197,6 +194,15 @@ fn handle_networking(
 
     let networking = networking_res.client.networking();
     
+    let mut guard = networking_res.event_queue_out.lock().unwrap();
+    let events_to_send: Vec<NetworkingEvent> = guard.drain(..).collect();
+    
+    drop(guard); //unlocks the mutex
+
+    events_to_send.into_iter().map(
+        |event| { networking_res.send_all_reliable(event.to_bytes()); } 
+    ).for_each(drop);
+
     let mut i: u8 = 0;
     loop {
         //limits the number of packets read per frame to packet_per_frame_limit
@@ -233,12 +239,9 @@ fn handle_networking(
             EVENT => {
                 //doesn't include the first byte which is the msg type
                 let event = NetworkingEvent::from_bytes(&buffer[1..]); 
-                //pushes the event to the event queue on a new thread to prevent blocking from
-                //slowing down networking
-                std::thread::spawn( move || {
-                    let mut queue_in = networking_res.event_queue_in[event.event_type as usize].lock().unwrap();
-                    queue_in.push(event);
-                } );
+                
+                let mut queue_in = networking_res.event_queue_in[event.event_type as usize].lock().unwrap();
+                queue_in.push(event);
             },
             _ => (),
         }

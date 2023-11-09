@@ -18,7 +18,7 @@ impl ScriptingResource {
         &self,
         //TODO
     ) -> PyFn {
-        panic!("Function Not Implemented");
+        panic!("at the disco");
         //TODO send function channels to scripting thread
     }
 }
@@ -32,6 +32,7 @@ impl PyFn {
         &mut self,
         //TODO
     ) {
+        panic!("at the disco");
         //TODO
     }
 }
