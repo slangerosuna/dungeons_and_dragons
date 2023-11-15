@@ -17,15 +17,19 @@ pub enum Resource {
 }
 
 #[derive(Component)]
-pub struct Move { //Action, BonusAction, Reaction, etc.
+pub struct Move <TCastSend, TCastRecv,
+                 TConcSend, TConcRecv>
+    where TCastSend: IntoPy<Py<PyTuple>>, TCastRecv: IntoPy<Py<PyTuple>>,
+          TConcSend: IntoPy<Py<PyTuple>>, TConcRecv: IntoPy<Py<PyTuple>>,
+{ //Action, BonusAction, Reaction, etc.
     required_resources: Vec<Resource>,
 
     name: String,
     icon_path: String, //path to the image displayed to represent the spell
     description: String,
 
-    cast: PyFn,
-    break_concentration: PyFn,
+    cast: PyFn<TCastSend, TCastRecv>,
+    break_concentration: Option<PyFn<TConcSend, TConcRecv>>,
 
     per_long_rest: bool,
     per_short_rest: bool,
@@ -33,7 +37,10 @@ pub struct Move { //Action, BonusAction, Reaction, etc.
     used_this_rest: bool,
 }
 
-impl Move {
+impl
+<TCastSend: IntoPy<Py<PyTuple>>, TCastRecv: IntoPy<Py<PyTuple>>,
+ TConcSend: IntoPy<Py<PyTuple>>, TConcRecv: IntoPy<Py<PyTuple>>> 
+    Move<TCastSend, TCastRecv, TConcSend, TConcRecv> {
     fn new(
         required_resources: Vec<Resource>,
         
@@ -41,8 +48,8 @@ impl Move {
         icon_path: String,
         description: String,
         
-        cast: PyFn, 
-        break_concentration: PyFn,
+        cast: PyFn<TCastSend, TCastRecv>, 
+        break_concentration: Option<PyFn<TConcSend, TConcRecv>>,
 
         per_long_rest: bool,
         per_short_rest: bool,
