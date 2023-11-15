@@ -17,6 +17,6 @@ steamworks = "0.10.0"
 tokio = "1.32.0"
 
 [lib]
-name = "dndlib"
+name = "dndapi"
 
 crate-type = ["cdylib"]

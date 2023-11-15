@@ -315,7 +315,7 @@ fn sync_master_entities(
         { return; }
 
     for entity in query.iter() {
-        if (entity.1.object_info & 0b01000000) != 0 {
+        if (entity.1.object_info & 0b01000000) != 0 { //checks whether or not to sync periodically
             let mut bytes: Vec<u8> = Vec::new();
 
             //Adds header data (message type and static id)
