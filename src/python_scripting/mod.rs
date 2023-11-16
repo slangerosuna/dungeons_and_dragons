@@ -63,15 +63,18 @@ impl PythonManager {
 }
 
 pub struct PyFnInfo<SendType, ReceiveType>
-    where SendType: IntoPy<Py<PyTuple>>,
-          ReceiveType: IntoPy<Py<PyTuple>>,
+    where SendType: IntoPy<Py<PyTuple>> + ?Sized,
+          ReceiveType: IntoPy<Py<PyTuple>> + ?Sized,
 {
-    //TODO    
+    //temporary fix for not using generics
+    pub send: Box<SendType>, //TODO remove
+    pub recv: Box<ReceiveType>, //TODO remove
+    //TODO
 }
 
 pub struct PyFn<SendType, ReceiveType> 
-    where SendType: IntoPy<Py<PyTuple>>,
-          ReceiveType: IntoPy<Py<PyTuple>>,
+    where SendType: IntoPy<Py<PyTuple>> + ?Sized,
+          ReceiveType: IntoPy<Py<PyTuple>> + ?Sized,
 {
     pub caller: Sender<SendType>,
     pub caller_recv: Receiver<PyResult<ReceiveType>>,
