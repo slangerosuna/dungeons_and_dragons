@@ -43,7 +43,7 @@ fn init() -> PyResult<()> {
                 .add_plugin(ScriptingPlugin)
                 .add_plugin(AIPlugin {
                     api_key: String::from(
-                        "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"
+                        ""
                     ),
                     model: String::from("gpt-3.5-turbo"),
                 })
