@@ -60,7 +60,7 @@ fn init() -> PyResult<()> {
 }
 
 #[pymodule]
-fn dndlib(_py: Python, m: &PyModule) -> PyResult<()> {
+fn dndapi(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(init, m)?)?;
     Ok(())
 }
