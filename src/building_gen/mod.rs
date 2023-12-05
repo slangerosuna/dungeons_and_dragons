@@ -1,3 +1,6 @@
+/* 
+ * @Author: Sofia Langer-Osuna
+ */
 use bevy::prelude::*;
 use bevy_app_compute::prelude::*;
 

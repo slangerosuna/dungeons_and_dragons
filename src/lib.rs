@@ -1,3 +1,6 @@
+/* 
+ * @Author: Sofia Langer-Osuna
+ */
 mod dnd_structs;
 mod networking;
 mod ai;

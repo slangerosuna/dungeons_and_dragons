@@ -1,3 +1,6 @@
+/* 
+ * @Author: Sofia Langer-Osuna
+ */
 use bevy::prelude::*;
 use crate::python_scripting::*;
 use pyo3::{*, types::*,};

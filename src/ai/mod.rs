@@ -1,3 +1,7 @@
+/* 
+ * @Author: Sofia Langer-Osuna
+ */
+
 use bevy::prelude::*;
 use rs_openai:: {
     OpenAI,
