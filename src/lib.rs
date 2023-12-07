@@ -22,7 +22,7 @@ use terrain_gen::*;
 use character_gen::*;
 
 #[pyfunction]
-fn init() -> PyResult<()> {
+fn init() -> PyResult<PythonManager> {
     //Makes it so that if someone calls `panic!("at the disco")` it will open a Panic! at the Disco song
     //This has no real purpose, but I find it funny and it's my project so you can't stop me
     std::panic::set_hook(Box::new(|panic_info| {
@@ -30,7 +30,7 @@ fn init() -> PyResult<()> {
            open::that("https://www.youtube.com/watch?v=H5NqIsnyTG8").ok();
         }
     }));
-
+    
     let (scripting_resource, python_manager) = ScriptingResource::new();
     
     spawn(
@@ -55,12 +55,12 @@ fn init() -> PyResult<()> {
         }
     );
     
-    python_manager.run();
-    Ok(())
+    Ok(python_manager)
 }
 
 #[pymodule]
 fn dndapi(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(init, m)?)?;
+    m.add_class::<PythonManager>()?;
     Ok(())
 }

@@ -1,7 +1,8 @@
 import dndapi
 
 def main():
-    dndapi.init()
+    api = dndapi.init()
+    api.run()
 
 if __name__ == "__main__":
     main()

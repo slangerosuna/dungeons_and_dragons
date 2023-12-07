@@ -11,7 +11,6 @@ use std::sync::{
         Sender,
     } 
 };
-use std::thread::*;
 use pyo3::{
     prelude::*,
     types::PyTuple,
@@ -45,17 +44,24 @@ impl ScriptingResource {
                          TRecv: IntoPy<Py<PyTuple>> + Send + 'static>(
         &self,
         fn_info: Box<PyFnInfo<TSend, TRecv>>,
-    ) -> Box<PyFn<TSend, TRecv>> {
-        self.fn_registrator.lock().unwrap().send(fn_info);
-        self.fn_registrator_recv.lock().unwrap().recv().unwrap().downcast::<PyFn<TSend, TRecv>>().unwrap()
+    ) -> Result<Box<PyFn<TSend, TRecv>>, ()> { //Error is () because I don't know what to put yet
+        let guard = self.fn_registrator.lock().map_err(|_| ())?; //lock mutex
+        let _ = guard.send(fn_info).map_err(|_| ())?;
+        drop(guard); //unlock mutex
+
+        let guard = self.fn_registrator_recv.lock().map_err(|_| ())?; //lock mutex
+        guard.recv().map_err(|_| ())? //receive result
+            .downcast::<PyFn<TSend, TRecv>>().map_err(|_| ()) //downcast to PyFn
     }
 }
 
+#[pyclass]
 pub struct PythonManager {
     fn_registrator: Sender<Box<dyn Any + Send>>,
     fn_registrator_recv: Receiver<Box<dyn Any + Send>>,
 }
 
+#[pymethods]
 impl PythonManager {
     pub fn run(&self) {
         //TODO python managing thread
